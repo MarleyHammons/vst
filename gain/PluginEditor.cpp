@@ -37,6 +37,8 @@ GainAudioProcessorEditor::GainAudioProcessorEditor (GainAudioProcessor& p)
         mGainControlSlider.onDragEnd = [gainParameter] {
             gainParameter->endChangeGesture();
         };
+    mGainControlSlider.setRange(gainParameter->range.start, gainParameter->range.end);
+    mGainControlSlider.setValue(*gainParameter);
 }
 
 GainAudioProcessorEditor::~GainAudioProcessorEditor()
