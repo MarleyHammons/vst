@@ -1,0 +1,61 @@
+/*
+  ==============================================================================
+
+    This file contains the basic framework code for a JUCE plugin editor.
+
+  ==============================================================================
+*/
+
+#include "PluginProcessor.h"
+#include "PluginEditor.h"
+
+//==============================================================================
+GainAudioProcessorEditor::GainAudioProcessorEditor (GainAudioProcessor& p)
+    : AudioProcessorEditor (&p), audioProcessor (p)
+{
+    auto& params = processor.getParameters();
+    juce::AudioParameterFloat* gainParameter = (juce::AudioParameterFloat*)params.getUnchecked(0);
+    mGainControlSlider.setBounds(0, 0, 100, 100);
+    // Make sure that before the constructor has finished, you've set the
+    // editor's size to whatever you need it to be.
+    setSize (400, 300);
+    mGainControlSlider.setSliderStyle(juce::Slider::SliderStyle::RotaryVerticalDrag);
+    mGainControlSlider.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
+    mGainControlSlider.onValueChange = [this, gainParameter] {
+    *gainParameter = mGainControlSlider.getValue();
+    };
+    addAndMakeVisible(mGainControlSlider);
+    
+    mGainControlSlider.onDragStart = [gainParameter] {
+            gainParameter->beginChangeGesture();
+        };
+        
+        mGainControlSlider.onValueChange = [this, gainParameter] {
+        *gainParameter = mGainControlSlider.getValue();
+        };
+        
+        mGainControlSlider.onDragEnd = [gainParameter] {
+            gainParameter->endChangeGesture();
+        };
+}
+
+GainAudioProcessorEditor::~GainAudioProcessorEditor()
+{
+}
+
+//==============================================================================
+void GainAudioProcessorEditor::paint (juce::Graphics& g)
+{
+    // (Our component is opaque, so we must completely fill the background with a solid colour)
+    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+
+    g.setColour (juce::Colours::white);
+    g.setFont (juce::FontOptions (15.0f));
+    g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
+}
+
+void GainAudioProcessorEditor::resized()
+{
+    // This is generally where you'll want to lay out the positions of any
+    // subcomponents in your editor..
+}
