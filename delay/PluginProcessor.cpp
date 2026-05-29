@@ -24,6 +24,12 @@ DelayAudioProcessor::DelayAudioProcessor()
 {
     mCircularBufferLeft = nullptr;
     mCircularBufferRight = nullptr;
+    // in the constructor (PluginProcessor::PluginProcessor()) in PluginProcessor.cpp:
+    mCircularBufferWriteHead = 0;
+    mCircularBufferLength = 0;
+
+    // constructor call: zeroes out value in case something was sitting in memory
+    // prepareToPlay call: handles case of user changing sample rate in Ableton
 }
 
 DelayAudioProcessor::~DelayAudioProcessor()
@@ -104,6 +110,12 @@ void DelayAudioProcessor::changeProgramName (int index, const juce::String& newN
 //==============================================================================
 void DelayAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    // in the constructor (PluginProcessor::PluginProcessor()) in PluginProcessor.cpp:
+    mCircularBufferWriteHead = 0;
+    mCircularBufferLength = sampleRate * MAX_DELAY_TIME;
+
+    // constructor call: zeroes out value in case something was sitting in memory
+    // prepareToPlay call: handles case of user changing sample rate in Ableton
     if (mCircularBufferLeft == nullptr) {
             mCircularBufferLeft = new float [(int)(sampleRate * MAX_DELAY_TIME)](); // trailing parens initialize as zeros
         }
@@ -149,6 +161,18 @@ bool DelayAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
 
 void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+        for (int i = 0; i < buffer.getNumSamples(); i++) {
+            float* leftChannel = buffer.getWritePointer(0);
+            float* rightChannel = buffer.getWritePointer(1);
+            mCircularBufferLeft[mCircularBufferWriteHead] = leftChannel[i];
+            mCircularBufferRight[mCircularBufferWriteHead] = rightChannel[i];
+            mCircularBufferWriteHead++;
+                    
+                    if (mCircularBufferWriteHead >= mCircularBufferLength) {
+                        mCircularBufferWriteHead = 0;
+                    }
+        }
+
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
