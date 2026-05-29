@@ -22,10 +22,21 @@ DelayAudioProcessor::DelayAudioProcessor()
                        )
 #endif
 {
+    mCircularBufferLeft = nullptr;
+    mCircularBufferRight = nullptr;
 }
 
 DelayAudioProcessor::~DelayAudioProcessor()
 {
+    if (mCircularBufferLeft != nullptr) {
+            delete [] mCircularBufferLeft;
+            mCircularBufferLeft = nullptr;
+        }
+        
+        if (mCircularBufferRight != nullptr) {
+            delete [] mCircularBufferRight;
+            mCircularBufferRight = nullptr;
+        }
 }
 
 //==============================================================================
@@ -93,6 +104,13 @@ void DelayAudioProcessor::changeProgramName (int index, const juce::String& newN
 //==============================================================================
 void DelayAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    if (mCircularBufferLeft == nullptr) {
+            mCircularBufferLeft = new float [(int)(sampleRate * MAX_DELAY_TIME)](); // trailing parens initialize as zeros
+        }
+        
+        if (mCircularBufferRight == nullptr) {
+            mCircularBufferRight = new float [(int)(sampleRate * MAX_DELAY_TIME)](); // trailing parens initialize as zeros
+        }
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
 }
