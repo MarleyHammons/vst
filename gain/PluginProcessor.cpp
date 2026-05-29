@@ -182,13 +182,13 @@ void GainAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 //==============================================================================
 bool GainAudioProcessor::hasEditor() const
 {
-    return false; // (change this to false if you choose to not supply an editor)
+    return true; // (change this to false if you choose to not supply an editor)
 }
 
 juce::AudioProcessorEditor* GainAudioProcessor::createEditor()
 {
-    return nullptr;
-    //return new GainAudioProcessorEditor (*this);//
+    //return nullptr;
+    return new GainAudioProcessorEditor (*this);//
 }
 
 //==============================================================================
