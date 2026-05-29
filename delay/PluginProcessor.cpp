@@ -22,6 +22,8 @@ DelayAudioProcessor::DelayAudioProcessor()
                        )
 #endif
 {
+    mDelayTimeInSamples = 0;
+    mCircularBufferReadHead = 0;
     mCircularBufferLeft = nullptr;
     mCircularBufferRight = nullptr;
     // in the constructor (PluginProcessor::PluginProcessor()) in PluginProcessor.cpp:
@@ -110,6 +112,7 @@ void DelayAudioProcessor::changeProgramName (int index, const juce::String& newN
 //==============================================================================
 void DelayAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    mDelayTimeInSamples = sampleRate * 0.5;
     // in the constructor (PluginProcessor::PluginProcessor()) in PluginProcessor.cpp:
     mCircularBufferWriteHead = 0;
     mCircularBufferLength = sampleRate * MAX_DELAY_TIME;
@@ -161,7 +164,12 @@ bool DelayAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
 
 void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    mCircularBufferReadHead = mCircularBufferWriteHead - mDelayTimeInSamples;
         for (int i = 0; i < buffer.getNumSamples(); i++) {
+            mCircularBufferReadHead = mCircularBufferWriteHead - mDelayTimeInSamples;
+                    if (mCircularBufferReadHead < 0) {
+                        mCircularBufferReadHead += mCircularBufferLength;
+                    }
             float* leftChannel = buffer.getWritePointer(0);
             float* rightChannel = buffer.getWritePointer(1);
             mCircularBufferLeft[mCircularBufferWriteHead] = leftChannel[i];
