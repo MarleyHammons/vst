@@ -30,4 +30,7 @@ private:
     DelayAudioProcessor& audioProcessor;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DelayAudioProcessorEditor)
+    juce::Slider mDryWetSlider;
+    juce::Slider mFeedbackSlider;
+    juce::Slider mDelayTimeSlider;
 };
