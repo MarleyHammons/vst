@@ -29,6 +29,8 @@ DelayAudioProcessor::DelayAudioProcessor()
     // in the constructor (PluginProcessor::PluginProcessor()) in PluginProcessor.cpp:
     mCircularBufferWriteHead = 0;
     mCircularBufferLength = 0;
+    mFeedbackLeft = 0;
+    mFeedbackRight = 0;
 
     // constructor call: zeroes out value in case something was sitting in memory
     // prepareToPlay call: handles case of user changing sample rate in Ableton
@@ -166,15 +168,23 @@ void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 {
     mCircularBufferReadHead = mCircularBufferWriteHead - mDelayTimeInSamples;
         for (int i = 0; i < buffer.getNumSamples(); i++) {
-            mCircularBufferReadHead = mCircularBufferWriteHead - mDelayTimeInSamples;
-                    if (mCircularBufferReadHead < 0) {
-                        mCircularBufferReadHead += mCircularBufferLength;
-                    }
             float* leftChannel = buffer.getWritePointer(0);
             float* rightChannel = buffer.getWritePointer(1);
             mCircularBufferLeft[mCircularBufferWriteHead] = leftChannel[i];
             mCircularBufferRight[mCircularBufferWriteHead] = rightChannel[i];
             mCircularBufferWriteHead++;
+            float delay_sample_left = mCircularBufferLeft[(int)mCircularBufferReadHead];
+            float delay_sample_right = mCircularBufferRight[(int)mCircularBufferReadHead];
+            mFeedbackLeft = delay_sample_left * 0.8;
+            mFeedbackRight = delay_sample_right * 0.8;
+            buffer.addSample(0, i, delay_sample_left);
+            buffer.addSample(1, i, delay_sample_right);
+            mCircularBufferLeft[mCircularBufferWriteHead] = leftChannel[i] + mFeedbackLeft;
+            mCircularBufferRight[mCircularBufferWriteHead] = rightChannel[i] + mFeedbackRight;
+            mCircularBufferReadHead = mCircularBufferWriteHead - mDelayTimeInSamples;
+                    if (mCircularBufferReadHead < 0) {
+                        mCircularBufferReadHead += mCircularBufferLength;
+                    }
                     
                     if (mCircularBufferWriteHead >= mCircularBufferLength) {
                         mCircularBufferWriteHead = 0;
