@@ -31,7 +31,7 @@ DelayAudioProcessor::DelayAudioProcessor()
     mCircularBufferLength = 0;
     mFeedbackLeft = 0;
     mFeedbackRight = 0;
-
+    mDryWet = 0.5;
     // constructor call: zeroes out value in case something was sitting in memory
     // prepareToPlay call: handles case of user changing sample rate in Ableton
 }
@@ -177,8 +177,8 @@ void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
             float delay_sample_right = mCircularBufferRight[(int)mCircularBufferReadHead];
             mFeedbackLeft = delay_sample_left * 0.8;
             mFeedbackRight = delay_sample_right * 0.8;
-            buffer.addSample(0, i, delay_sample_left);
-            buffer.addSample(1, i, delay_sample_right);
+            buffer.setSample(0, i, buffer.getSample(0, i) * (1 - mDryWet) + delay_sample_left * mDryWet);
+            buffer.setSample(1, i, buffer.getSample(1, i) * (1 - mDryWet) + delay_sample_right * mDryWet);
             mCircularBufferLeft[mCircularBufferWriteHead] = leftChannel[i] + mFeedbackLeft;
             mCircularBufferRight[mCircularBufferWriteHead] = rightChannel[i] + mFeedbackRight;
             mCircularBufferReadHead = mCircularBufferWriteHead - mDelayTimeInSamples;
