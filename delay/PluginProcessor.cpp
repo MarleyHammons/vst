@@ -174,12 +174,6 @@ void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
             mCircularBufferLeft[mCircularBufferWriteHead] = leftChannel[i];
             mCircularBufferRight[mCircularBufferWriteHead] = rightChannel[i];
             mCircularBufferWriteHead++;
-            float delay_sample_left = mCircularBufferLeft[(int)mCircularBufferReadHead];
-            float delay_sample_right = mCircularBufferRight[(int)mCircularBufferReadHead];
-            mFeedbackLeft = delay_sample_left * *mFeedbackParameter;
-            mFeedbackRight = delay_sample_right * *mFeedbackParameter;
-            buffer.setSample(0, i, buffer.getSample(0, i) * *mDryWetParameter + delay_sample_left * (1 - *mDryWetParameter));
-            buffer.setSample(1, i, buffer.getSample(1, i) * *mDryWetParameter + delay_sample_right * (1 - *mDryWetParameter));
             mCircularBufferLeft[mCircularBufferWriteHead] = leftChannel[i] + mFeedbackLeft;
             mCircularBufferRight[mCircularBufferWriteHead] = rightChannel[i] + mFeedbackRight;
             mCircularBufferReadHead = mCircularBufferWriteHead - mDelayTimeInSamples;
@@ -187,10 +181,21 @@ void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
                     if (mCircularBufferReadHead < 0) {
                         mCircularBufferReadHead += mCircularBufferLength;
                     }
-                    
+            int readHead_x = (int)mCircularBufferReadHead;
+            int readHead_x1 = readHead_x + 1;
+            float readHeadFloat = mCircularBufferReadHead - readHead_x;
+            if (readHead_x1 >= mCircularBufferLength) {
+            readHead_x1 -= mCircularBufferLength;
+            }
                     if (mCircularBufferWriteHead >= mCircularBufferLength) {
                         mCircularBufferWriteHead = 0;
                     }
+            float delay_sample_left = lin_interp(mCircularBufferLeft[readHead_x], mCircularBufferLeft[readHead_x1], readHeadFloat);
+            float delay_sample_right = lin_interp(mCircularBufferRight[readHead_x], mCircularBufferRight[readHead_x1], readHeadFloat);
+            mFeedbackLeft = delay_sample_left * *mFeedbackParameter;
+            mFeedbackRight = delay_sample_right * *mFeedbackParameter;
+            buffer.setSample(0, i, buffer.getSample(0, i) * *mDryWetParameter + delay_sample_left * (1 - *mDryWetParameter));
+            buffer.setSample(1, i, buffer.getSample(1, i) * *mDryWetParameter + delay_sample_right * (1 - *mDryWetParameter));
         }
 
     juce::ScopedNoDenormals noDenormals;
@@ -250,4 +255,9 @@ void DelayAudioProcessor::setStateInformation (const void* data, int sizeInBytes
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new DelayAudioProcessor();
+}
+
+float DelayAudioProcessor::lin_interp(float sample_x, float sample_x1, float inPhase)
+{
+    return (1 - inPhase) * sample_x + inPhase * sample_x1; // maybe looks familiar from dry/wet math...
 }
