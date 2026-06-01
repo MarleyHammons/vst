@@ -31,7 +31,9 @@ DelayAudioProcessor::DelayAudioProcessor()
     mCircularBufferLength = 0;
     mFeedbackLeft = 0;
     mFeedbackRight = 0;
-    mDryWet = 0.5;
+    addParameter(mDryWetParameter = new juce::AudioParameterFloat({"drywet", 1}, "Dry Wet", 0, 1.0, 0.5));
+    addParameter(mFeedbackParameter = new juce::AudioParameterFloat({"feedback", 1}, "Feedback", 0, 0.98, 0.5));
+    addParameter(mDelayTimeParameter = new juce::AudioParameterFloat({"delaytime", 1}, "Delay Time", 0.01, MAX_DELAY_TIME, 0.5));
     // constructor call: zeroes out value in case something was sitting in memory
     // prepareToPlay call: handles case of user changing sample rate in Ableton
 }
@@ -114,7 +116,6 @@ void DelayAudioProcessor::changeProgramName (int index, const juce::String& newN
 //==============================================================================
 void DelayAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    mDelayTimeInSamples = sampleRate * 0.5;
     // in the constructor (PluginProcessor::PluginProcessor()) in PluginProcessor.cpp:
     mCircularBufferWriteHead = 0;
     mCircularBufferLength = sampleRate * MAX_DELAY_TIME;
@@ -175,13 +176,14 @@ void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
             mCircularBufferWriteHead++;
             float delay_sample_left = mCircularBufferLeft[(int)mCircularBufferReadHead];
             float delay_sample_right = mCircularBufferRight[(int)mCircularBufferReadHead];
-            mFeedbackLeft = delay_sample_left * 0.8;
-            mFeedbackRight = delay_sample_right * 0.8;
-            buffer.setSample(0, i, buffer.getSample(0, i) * (1 - mDryWet) + delay_sample_left * mDryWet);
-            buffer.setSample(1, i, buffer.getSample(1, i) * (1 - mDryWet) + delay_sample_right * mDryWet);
+            mFeedbackLeft = delay_sample_left * *mFeedbackParameter;
+            mFeedbackRight = delay_sample_right * *mFeedbackParameter;
+            buffer.setSample(0, i, buffer.getSample(0, i) * *mDryWetParameter + delay_sample_left * (1 - *mDryWetParameter));
+            buffer.setSample(1, i, buffer.getSample(1, i) * *mDryWetParameter + delay_sample_right * (1 - *mDryWetParameter));
             mCircularBufferLeft[mCircularBufferWriteHead] = leftChannel[i] + mFeedbackLeft;
             mCircularBufferRight[mCircularBufferWriteHead] = rightChannel[i] + mFeedbackRight;
             mCircularBufferReadHead = mCircularBufferWriteHead - mDelayTimeInSamples;
+            mDelayTimeInSamples = getSampleRate() * *mDelayTimeParameter;
                     if (mCircularBufferReadHead < 0) {
                         mCircularBufferReadHead += mCircularBufferLength;
                     }
