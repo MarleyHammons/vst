@@ -34,6 +34,7 @@ DelayAudioProcessor::DelayAudioProcessor()
     addParameter(mDryWetParameter = new juce::AudioParameterFloat({"drywet", 1}, "Dry Wet", 0, 1.0, 0.5));
     addParameter(mFeedbackParameter = new juce::AudioParameterFloat({"feedback", 1}, "Feedback", 0, 0.98, 0.5));
     addParameter(mDelayTimeParameter = new juce::AudioParameterFloat({"delaytime", 1}, "Delay Time", 0.01, MAX_DELAY_TIME, 0.5));
+    mDelayTimeSmoothed = 0;
     // constructor call: zeroes out value in case something was sitting in memory
     // prepareToPlay call: handles case of user changing sample rate in Ableton
 }
@@ -116,6 +117,7 @@ void DelayAudioProcessor::changeProgramName (int index, const juce::String& newN
 //==============================================================================
 void DelayAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    mDelayTimeSmoothed = *mDelayTimeParameter;
     // in the constructor (PluginProcessor::PluginProcessor()) in PluginProcessor.cpp:
     mCircularBufferWriteHead = 0;
     mCircularBufferLength = sampleRate * MAX_DELAY_TIME;
@@ -168,6 +170,7 @@ bool DelayAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
 void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     mCircularBufferReadHead = mCircularBufferWriteHead - mDelayTimeInSamples;
+    mDelayTimeInSamples = getSampleRate() * *mDelayTimeParameter;
         for (int i = 0; i < buffer.getNumSamples(); i++) {
             float* leftChannel = buffer.getWritePointer(0);
             float* rightChannel = buffer.getWritePointer(1);
@@ -196,6 +199,9 @@ void DelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
             mFeedbackRight = delay_sample_right * *mFeedbackParameter;
             buffer.setSample(0, i, buffer.getSample(0, i) * *mDryWetParameter + delay_sample_left * (1 - *mDryWetParameter));
             buffer.setSample(1, i, buffer.getSample(1, i) * *mDryWetParameter + delay_sample_right * (1 - *mDryWetParameter));
+            mDelayTimeSmoothed = mDelayTimeSmoothed - 0.001 * (mDelayTimeSmoothed - *mDelayTimeParameter);
+            mDelayTimeInSamples = getSampleRate() * mDelayTimeSmoothed;
+            
         }
 
     juce::ScopedNoDenormals noDenormals;
